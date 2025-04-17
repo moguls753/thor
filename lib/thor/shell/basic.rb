@@ -380,8 +380,18 @@ class Thor
         @merge_tool ||= ENV["THOR_MERGE"] || git_merge_tool
       end
 
-      def git_merge_tool #:nodoc:
-        `git config merge.tool`.rstrip rescue ""
+      def git_merge_tool
+        tool = `git config merge.tool`.strip
+        return "" if tool.empty?
+
+        custom = `git config --get mergetool.#{tool}.cmd`.strip
+        return custom unless custom.empty?
+
+        return tool if system("command -v #{Shellwords.escape(tool)} > /dev/null 2>&1")
+
+        "git mergetool --no-prompt --tool=#{tool}"
+      rescue
+        ""
       end
     end
   end
